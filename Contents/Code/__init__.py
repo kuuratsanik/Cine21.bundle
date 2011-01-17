@@ -9,7 +9,9 @@ def Start():
 
 class Cine21Agent(Agent.Movies):
   name = 'Cine21'
-  languages = [Locale.Language.English]
+  primary_provider = True
+  languages = [Locale.Language.Korean]
+  accepts_from = ['com.plexapp.agents.localmedia']
 
   def GetFixedXML(self, url, isHtml=False):		# function for getting XML in the corresponding URL
     xml = HTTP.Request(url)
