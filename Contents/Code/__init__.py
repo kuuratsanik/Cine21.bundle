@@ -1,7 +1,7 @@
 import urllib2, urllib, string, random, types, unicodedata, re, datetime
 
-CINE21_OPEN_API_URL = 'http://10.177.31.36:8080/SearchOpenAPI/api/search.xml?query=%s'
-CINE21_META_URL = 'http://10.177.31.36:8080/SearchOpenAPI/api/searchDetail.xml?titleId=%s'
+CINE21_OPEN_API_URL = 'http://kr.lgtvsdp.com/SearchOpenAPI/api/search.xml?query=%s'
+CINE21_META_URL = 'http://kr.lgtvsdp.com/SearchOpenAPI/api/searchDetail.xml?titleId=%s'
 
 def Start():
 #  HTTP.CacheTime = CACHE_1HOUR * 4
@@ -36,13 +36,13 @@ class Cine21Agent(Agent.Movies):
     #Log("after revising! [media_name]: %s, [media_year]: %s" %(media_name, media.year) )
 
     url = CINE21_OPEN_API_URL %(urllib.quote(media_name))	# URL for movie name search
-    xml = self.GetFixedXML(url)                                            # to get XML for search result
+    xml = self.GetFixedXML(url)                                                           # to get XML for search result
     items = xml.xpath('//content')            
     order = 0
 
     for item in items:
-	score = 95 - order*10										# score is set depending on the search ranking and  a score for the first candidate is 93
-	order = order + 1			
+	score = 95 - order*10										# score is set depending on the search ranking   
+	order = order + 1											# A score for the first candidate is 95 and score is reduced by 10
 	
 	years = item.xpath('makeYear')								# at first, year is compared
         if years != [] : year = int(years[0].text)
@@ -54,9 +54,10 @@ class Cine21Agent(Agent.Movies):
 	
 	id = item.xpath('titleId')[0].text								# ID
 
-	thumbs =item.xpath('imageList/image/imageUrl')					# thumb
-	if thumbs != [] : thumb = thumbs[0].text
-	else :               thumb = ' '
+	thumb = ''
+	#thumbs =item.xpath('imageList/image/imageUrl')				# thumb is not required. In update function, thumb image will be updated later. 
+	#if thumbs != [] : thumb = thumbs[0].text
+	#else :               thumb = ' '
 
 	kor_title_cand = item.xpath('korName')[0].text					# Korean title
 	eng_title_cands = item.xpath('engName')						# English title
@@ -77,7 +78,7 @@ class Cine21Agent(Agent.Movies):
 	len_title = 0
 	len_media = 0
 	leng = 0
-	if re.search('[a-zA-Z]+', media_name) and eng_title_cand != '?' :                                                     # if media name includes alphabet, then the media name is considered as english title not korean title                          
+	if re.search('[a-zA-Z]+', media_name) and eng_title_cand != '?' :                                 # if media name includes alphabet, then the media name is considered as english title not korean title                          
 		score_cand = eng_score		
 		#eng_title_cand = unicodedata.normalize('NFKC', eng_title_cand.decode('utf-8')).encode('utf-8')
 		len_title = len(eng_title_cand)
@@ -90,9 +91,9 @@ class Cine21Agent(Agent.Movies):
 	#if kor_score > eng_score : score_cand = eng_score
 	#else :                               score_cand = kor_score
 
-	len_media = len(media_name)                                                            
-	if len_title > len_media : 
-		leng = len_media
+	len_media = len(media_name)                              # variable for the length of movie title is required, because searching rate of movie with short titile is low                                  
+	if len_title > len_media :                                          # if a movie has longer title, the movie is searched more exactly.
+ 		leng = len_media                                             # therefore, dependency about the length will be applied 
 	else :                            leng = len_title
 	
 	if score_cand == 0   : score = 99								# if media name is exactly matched, final score is set to the highest value 96 and other factors are not compared
@@ -106,7 +107,7 @@ class Cine21Agent(Agent.Movies):
 			score = 96 - 15*score_cand/leng			
 			Log('find eng!')	
 		else :
-			#if lang_flag =='en' :		score = score - 25*score_cand/leng                  # if difference between media name and candidate title is large, score is deducted		
+			#if lang_flag =='en' :		score = score - 25*score_cand/leng                  # if difference between media name and candidate title is large, score is reduced		
 			#else :				score = score - 10*score_cand/leng	
 			score = score - 25*score_cand/leng	#score = score - 20*score_cand/leng	
 		
@@ -205,3 +206,14 @@ class Cine21Agent(Agent.Movies):
     except :
 	pass
    
+    try:
+	#images =xml.xpath('//image')					# thumb_poster
+	for img in images :
+		image_kind = img.xpath('imageKind')[0].text                                             
+		if image_kind == unicode('Æ÷½ºÅÍ', 'cp949') :                                                		 
+			art_url = img.xpath('imageUrl')[0].text
+			art = HTTP.Request(art_url)
+			metadata.posters[art_url] = proxy(art, sort_order = 1)
+			break
+    except :
+	pass
