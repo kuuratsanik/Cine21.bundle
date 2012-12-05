@@ -13,7 +13,7 @@ class Cine21Agent(Agent.Movies):
   languages = [Locale.Language.Korean]
   accepts_from = ['com.plexapp.agents.localmedia']
 
-  def GetFixedXML(self, url, isHtml=False):		# function for getting XML in the corresponding URL
+  def GetFixedXML(self, url, isHtml=None):		# function for getting XML in the corresponding URL
     xml = HTTP.Request(url)
     #Log("xml in GetFixedXML = %s" % xml)
     return XML.ElementFromString(xml, isHtml)
@@ -134,6 +134,8 @@ class Cine21Agent(Agent.Movies):
 	pass
 
     try :													# rating
+
+	#metadata.rating = float(xml.xpath('//makeYear')[0].text)         # modified in 11/12/6
 	total = 0
 	c_nodes = xml.xpath('//commentList/comment')
 	for c_node in c_nodes : total = total + int(c_node.xpath('point')[0].text)	
@@ -145,11 +147,14 @@ class Cine21Agent(Agent.Movies):
 	pass
  
     try :													# summary
-        summary = xml.xpath('//description')[0].text
-	summary = summary.replace('<b>', '\n')
-	summary = summary.replace('</b>', '!\n')
-	summary = summary.replace('<br>', '\n')
-	metadata.summary = unicode('<데이터 제공: 시네21> ', 'cp949') + summary
+
+	metadata.summary = xml.xpath('//description')[0].text                         # modified in 11/12/6
+	#summary = xml.xpath('//description')[0].text     
+	#summary = summary.replace('<b>', '\n')       
+	#summary = summary.replace('</b>', '!\n')
+	#summary = summary.replace('<br>', '\n')
+	#metadata.summary = unicode('<데이터 제공: 시네21> ', 'cp949') + summary
+	
 	#Log('metadata.summary = %s', metadata.summary)
   
     except :	
@@ -161,7 +166,7 @@ class Cine21Agent(Agent.Movies):
 	genres = all_genres.split(',')
 	#Log('genres = %s' %genres)
 	for genre in genres:
-		genre = genre[ : -5]
+		#genre = genre[ : -5]   # modified in 11/12/6
 		#Log(' revised genre = %s' %genre)
 		metadata.genres.add(genre)        
     except :
@@ -169,7 +174,7 @@ class Cine21Agent(Agent.Movies):
 
     try :													# duration
 	duration = xml.xpath('//runningTime')[0].text
-	duration = duration[ :-1]
+	#duration = duration[ :-1]                                                       # modified in 11/12/6
 	metadata.duration = int(duration)*60*1000   
     except :
         pass
@@ -181,11 +186,11 @@ class Cine21Agent(Agent.Movies):
 	nodes = xml.xpath('//person')
 	for node in nodes:
 		pRole = node.xpath('personRole')[0].text
-		if pRole == '0':
+		if pRole == '0' :
 			role = metadata.roles.new()
 			role.actor = node.xpath('personName')[0].text
        			
-		elif pRole == unicode('감독', 'cp949') :
+		elif pRole == 'director' :
 			metadata.directors.add (node.xpath('personName')[0].text)
        		
 		elif pRole == unicode('각본', 'cp949') or pRole == unicode('원작', 'cp949') :
@@ -198,7 +203,7 @@ class Cine21Agent(Agent.Movies):
 	images = xml.xpath('//image')
 	for img in images :
 		image_kind = img.xpath('imageKind')[0].text                                             
-		if image_kind == unicode('스틸컷', 'cp949') :                                                		 
+		if image_kind == 'stillcut' :                                                		 
 			art_url = img.xpath('imageUrl')[0].text
 			art = HTTP.Request(art_url)
 			metadata.art[art_url] = proxy(art, sort_order = 1)
@@ -210,7 +215,7 @@ class Cine21Agent(Agent.Movies):
 	#images =xml.xpath('//image')					# thumb_poster
 	for img in images :
 		image_kind = img.xpath('imageKind')[0].text                                             
-		if image_kind == unicode('포스터', 'cp949') :                                                		 
+		if image_kind == 'poster' :                                                		 
 			art_url = img.xpath('imageUrl')[0].text
 			art = HTTP.Request(art_url)
 			metadata.posters[art_url] = proxy(art, sort_order = 1)
